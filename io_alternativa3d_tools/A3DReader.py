@@ -105,6 +105,7 @@ def readVersion(package):
     return (versionMajor, versionMinor)
 
 def readObjects(package, nullMask):
+    print("## AmbientLights")
     # Read A3D2 objects
     ambientLights = []
     ambientLightCount = A3DArray.readArrayLength(package)
@@ -113,6 +114,7 @@ def readObjects(package, nullMask):
         obj.read(package, nullMask)
         ambientLights.append(obj)
 
+    print("## AnimationClips")
     animationClips = []
     animationClipCount = A3DArray.readArrayLength(package)
     for _ in range(animationClipCount):
@@ -120,10 +122,34 @@ def readObjects(package, nullMask):
         obj.read(package, nullMask)
         animationClips.append(obj)
 
+    print("## AnimationTracks")
     animationTracks = []
+    animationTrackCount = A3DArray.readArrayLength(package)
+    for _ in range(animationTrackCount):
+        obj = A3DObjects.animationTrack()
+        obj.read(package, nullMask)
+        animationTracks.append(obj)
+
+    print("## Boxes")
     boxes = []
+    boxCount = A3DArray.readArrayLength(package)
+    for _ in range(boxCount):
+        obj = A3DObjects.box()
+        obj.read(package, nullMask)
+        boxes.append(obj)    
+
+    print("## CubeMaps")
     cubeMaps = []
+    cubeMapCount = A3DArray.readArrayLength(package)
+    for _ in range(cubeMapCount):
+        obj = A3DObjects.cubeMap()
+        obj.read(package, nullMask)
+        cubeMaps.append(obj)
+
+    print("## Decals")
     decals = []
+    decalCount = A3DArray.readArrayLength(package)
+
     directionalLights = []
     images = []
     indexBuffers = []

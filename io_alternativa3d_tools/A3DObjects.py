@@ -21,9 +21,35 @@ SOFTWARE.
 '''
 
 from struct import unpack
+from numpy import array as npArray
 
 from . import A3DArray
 
+def readMatrix(package):
+    a, b, c, d, e, f, g, h, i, = unpack("9f", package.read(4*9))
+    matrix = npArray([
+        [a, b, c],
+        [d, e, f],
+        [g, h, i]
+    ])
+
+    return matrix
+
+'''
+Support objects, objects used by other objects
+'''
+class keyFrame:
+    def __init__(self):
+        self.time = 0.0
+        self.transform = None # A3DMatrix
+
+    def read(self, package):
+        self.time = unpack("f", package.read(4))
+        self.transform = readMatrix(package)
+
+'''
+File objects, these objects are contained in A3DArrays in every file
+'''
 class ambientLight:
     def __init__(self):
         self.color = 0
@@ -75,17 +101,62 @@ class animationClip:
 
         print(f"animationClip\n> id: {self.id} loop: {self.loop} tracks: {self.tracks}")
 
-class track:
+class animationTrack:
     def __init__(self):
-        pass
+        self.id = 0
+        self.keyFrames = [] # A3D2Keyframe
+        self.objectName = ""
+
+    def read(self, package, optionalMask):
+        self.id = int.from_bytes(package.read(4), "little")
+        keyFrameCount = A3DArray.readArrayLength(package)
+        for _ in range(keyFrameCount):
+            obj = keyFrame()
+            obj.read(package)
+            self.keyFrames.append(obj)
+        
+        print(f"animationTrack\n> id: {self.id} keyFrames: {self.keyFrames} objectName: {self.objectName}")
 
 class box:
     def __init__(self):
-        pass
+        self.bounds = [] # float
+        self.id = 0
+
+    def read(self, package, optionalMask):
+        self.bounds = A3DArray.readFloatArray(package)
+        self.id = int.from_bytes(package.read(4), "little")
+
+        print(f"box\n> bounds: {self.bounds} id: {self.id}")
 
 class cubeMap:
     def __init__(self):
-        pass
+        self.id = 0
+        self.topId = 0
+
+        # Optional
+        self.backId = None
+        self.bottomId = None
+        self.frontId = None
+        self.leftId = None
+        self.rightId = None
+
+    def read(self, package, optionalMap):
+        hasBackId, hasBottomId, hasFrontId, hasLeftId, hasRightId = optionalMap.getOptionals()
+
+        if hasBackId:
+            self.backId = int.from_bytes(package.read(4), "little")
+        if hasBottomId:
+            self.bottomId = int.from_bytes(package.read(4), "little")
+        if hasFrontId:
+            self.frontId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(4), "little")
+        if hasLeftId:
+            self.leftId = int.from_bytes(package.read(4), "little")
+        if hasRightId:
+            self.rightId = int.from_bytes(package.read(4), "little")
+        self.topId = int.from_bytes(package.read(4), "little")
+
+        print(f"cubeMap:\n> backId: {self.backId} bottomId: {self.bottomId} frontId: {self.frontId} id: {self.id} leftId: {self.leftId} rightId: {self.rightId} topId: {self.topId}")
 
 class decal:
     def __init__(self):

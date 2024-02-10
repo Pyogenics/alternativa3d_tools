@@ -36,6 +36,7 @@ def readArrayLength(package):
         # Long array: 6 bits + 1-2 bytes
         print("> Long array")
         byteCount = ((arrayField & 64) >> 7)
+        print(f">> Byte count: {byteCount + 1}")
         arrayLength += (arrayField & 63) << (8 * byteCount)
         arrayLength += int.from_bytes(package.read(byteCount + 1), "little")
     print(f"> Length: {arrayLength}")
@@ -52,14 +53,21 @@ def readString(package):
 
 def readIntArray(package):
     length = readArrayLength(package)
-    integers = unpack(f"{length}i")
-    integers = array(integers)
+    integers = unpack(f"{length}i", package.read(length*4))
+    integers = array("i", integers)
 
     return integers
 
 def readInt64Array(package):
     length = readArrayLength(package)
-    integers = unpack(f"{length}q")
-    integers = array(integers)
+    integers = unpack(f"{length}q", package.read(length*8))
+    integers = array("q", integers)
 
     return integers
+
+def readFloatArray(package):
+    length = readArrayLength(package)
+    floats = unpack(f"<{length}f", package.read(length*4))
+    floats = array("f", floats)
+
+    return floats
