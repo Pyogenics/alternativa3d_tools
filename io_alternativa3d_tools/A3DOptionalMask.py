@@ -25,18 +25,18 @@ from io import BytesIO
 class A3DOptionalMask:
     def __init__(self, optionalMaskBytes, offset):
         self.optionalMask = []
-        
+
         optionalMaskBytes = BytesIO(optionalMaskBytes)
         # Process first byte (the first byte is missing some bits on some null-mask configs)
+        maskByte = int.from_bytes(optionalMaskBytes.read(1))
         for bitI in range(8 - offset):
-            maskByte = int.from_bytes(optionalMaskBytes.read(1))
             self.optionalMask.append(
                 bool(maskByte & (2**bitI))
             )
 
-        for maskByte in optionalMaskBytes:
+        # Process the rest of the bytes
+        for maskByte in optionalMaskBytes.read():
             for bitI in range(8):
-                maskByte = int.from_bytes(maskByte)
                 self.optionalMask.append(
                     bool(maskByte & (2**bitI))
                 )
