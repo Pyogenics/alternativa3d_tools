@@ -42,6 +42,16 @@ def readArrayLength(package):
     print(f"> Length: {arrayLength}")
     return arrayLength
 
+def readA3DObjectArray(package, objReader, optionalMask):
+    length = readArrayLength(package)
+    objects = []
+    for _ in range(keyFrameCount):
+        obj = objReader()
+        obj.read(package, optionalMask)
+        objects.append(obj)
+
+    return objects
+
 '''
 Common types
 '''
@@ -50,6 +60,13 @@ def readString(package):
     string = package.read(stringLength).decode("utf-8")
 
     return string
+
+def readInt16Array(package):
+    length = readArrayLength(package)
+    integers = unpack(f"{length}h", package.read(length*2))
+    integers = array("h", integers)
+
+    return integers
 
 def readIntArray(package):
     length = readArrayLength(package)

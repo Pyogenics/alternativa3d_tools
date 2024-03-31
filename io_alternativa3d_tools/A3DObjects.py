@@ -43,9 +43,25 @@ class keyFrame:
         self.time = 0.0
         self.transform = None # A3DMatrix
 
-    def read(self, package):
+    def read(self, package, optionalMask):
         self.time = unpack("f", package.read(4))
         self.transform = readMatrix(package)
+
+class surface:
+    def __init__(self):
+        self.indexBegin = 0
+        self.numTriangles = 0
+
+        # Optional
+        self.materialId = None
+
+    def read(self, package, optionalMask):
+        hasMaterialId = optionalMask.getOptionals()
+
+        self.indexBegin = int.from_bytes(package.read(4), "little")
+        if hasMaterialId:
+            self.materialId = int.from_bytes(package.read(4), "little")
+        self.numTriangles = int.from_bytes(package.read(4), "little")
 
 '''
 File objects, these objects are contained in A3DArrays in every file
@@ -109,11 +125,7 @@ class animationTrack:
 
     def read(self, package, optionalMask):
         self.id = int.from_bytes(package.read(4), "little")
-        keyFrameCount = A3DArray.readArrayLength(package)
-        for _ in range(keyFrameCount):
-            obj = keyFrame()
-            obj.read(package)
-            self.keyFrames.append(obj)
+        self.keyFrames = A3DArray.readA3DObjectArray(package, keyFrame, optionalMask)
         
         print(f"animationTrack\n> id: {self.id} keyFrames: {self.keyFrames} objectName: {self.objectName}")
 
@@ -140,8 +152,8 @@ class cubeMap:
         self.leftId = None
         self.rightId = None
 
-    def read(self, package, optionalMap):
-        hasBackId, hasBottomId, hasFrontId, hasLeftId, hasRightId = optionalMap.getOptionals()
+    def read(self, package, optionalMask):
+        hasBackId, hasBottomId, hasFrontId, hasLeftId, hasRightId = optionalMask.getOptionals(5)
 
         if hasBackId:
             self.backId = int.from_bytes(package.read(4), "little")
@@ -160,56 +172,382 @@ class cubeMap:
 
 class decal:
     def __init__(self):
-        pass
+        self.id = 0
+        self.indexBufferId = 0
+        self.surfaces = [] # A3D2Surface
+        self.indexBuffers = [] # int
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.offset = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasOffset, hasParentId, hasTransform = optionalMask.getOptionals(5)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        self.indexBufferId = int.from_bytes(package.read(4), "little")
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasOffset:
+            self.offset = unpack("f", package.read(4))
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.visible = bool(package.read(1))
 
 class directionalLight:
     def __init__(self):
-        pass
+        self.color = 0
+        self.id = 0
+        self.intensity = 0.0
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.color = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        self.intensity = unpack("f", package.read(4))
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
 
 class image:
     def __init__(self):
-        pass
+        self.id = 0
+        self.url = ""
+
+    def read(self, package, optionalMask):
+        self.id = int.from_bytes(package.read(4), "little")
+        self.url = A3DArray.readString(package)
 
 class indexBuffer:
     def __init__(self):
-        pass
+        self.byteBuffer = b""
+        self.id = 0
+        self.indexCount = 0
+
+    def read(self, package, optionalMask):
+        self.byteBuffer = package.read(
+            A3DArray.readArrayLength(package)
+        )
+        self.id = int.from_bytes(package.read(4), "little")
+        self.indexCount = int.from_bytes(package.read(4), "little")
 
 class joint:
     def __init__(self):
-        pass
+        self.id = 0
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
 
 class map:
     def __init__(self):
-        pass
+        self.channel = 0
+        self.id = 0
+        self.imageId = 0
+
+    def read(self, package, optionalMask):
+        self.channel = int.from_bytes(package.read(2), "little")
+        self.id = int.from_bytes(package.read(4), "little")
+        self.imageId = int.from_bytes(package.read(4), "little")
 
 class material:
     def __init__(self):
-        pass
+        self.id = 0
+
+        # Optional
+        self.diffuseMapId = None
+        self.glossinessMapId = None
+        self.lightMapId = None
+        self.normalMapId = None
+        self.opacityMapId = None
+        self.reflectionCubeMapId = None
+        self.specularMapId = None
+
+    def read(self, package, optionalMask):
+        hasDiffuseMapId, hasGlossinessMapId, hasLightMapId, hasNormalMapId,
+        hasOpacityMapId, hasReflectionCubeMapId, hasSpecularMapId = optionalMask.getOptionals(7)
+
+        if hasDiffuseMapId:
+            self.diffuseMapId = int.from_bytes(package.read(4), "little")
+        if hasGlossinessMapId:
+            self.glossinessMapId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(4), "little")
+        if hasLightMapId:
+            self.lightMapId = int.from_bytes(package.read(4), "little")
+        if hasNormalMapId:
+            self.normalMapId = int.from_bytes(package.read(4), "little")
+        if hasOpacityMapId:
+            self.opacityMapId = int.from_bytes(package.read(4), "little")
+        if hasReflectionCubeMapId:
+            self.reflectionCubeMapId = int.from_bytes(package.read(4), "little")
+        if hasSpecularMapId:
+            self.specularMapId = int.from_bytes(package.read(4), "little")
 
 class mesh:
     def __init__(self):
-        pass
+        self.id = 0
+        self.indexBufferId = 0
+        self.surfaces = [] # surface
+        self.vertexBuffers = [] # int
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        self.indexBufferId = int.from_bytes(package.read(4), "little")
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.visible = bool(package.read(1))
 
 class object:
     def __init__(self):
-        pass
+        self.id = 0
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
 
 class omniLight:
     def __init__(self):
-        pass
+        self.attenuationBegin = 0.0
+        self.attenuationEnd = 0.0
+        self.color = 0
+        self.id = 0
+        self.intensity = 0.0
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        self.attenuationBegin = unpack("f", package.read(4))
+        self.attenuationEnd = unpack("f", package.read(4))
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.color = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        self.intensity = unpack("f", package.read(4))
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
 
 class spotLight:
     def __init__(self):
-        pass
+        self.attenuationBegin = 0.0
+        self.attenuationEnd = 0.0
+        self.color = 0
+        self.id = 0
+        self.intensity = 0.0
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.falloff = None
+        self.hotspot = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasFalloff, hasHotspot, hasName, hasParentId, hasTransform = optionalMask.getOptionals(6)
+
+        self.attenuationBegin = unpack("f", package.read(4))
+        self.attenuationEnd = unpack("f", package.read(4))
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.color = int.from_bytes(package.read(4), "little")
+        if hasFalloff:
+            self.falloff = unpack("f", package.read(4))
+        if hasHotspot:
+            self.hotspot = unpack("f", package.read(4))
+        self.id = int.from_bytes(package.read(8), "little")
+        self.intensity = unpack("f", package.read(4))
+        if hasName:
+            self.name = A3DArray.readString(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
 
 class sprite:
     def __init__(self):
-        pass
+        self.alwaysOnTop = False
+        self.height = 0.0
+        self.id = 0
+        self.materialId = 0
+        self.originX = 0.0
+        self.originY = 0.0
+        self.perspectiveScale = True
+        self.rotation = 0.0
+        self.visible = False
+        self.width = 0.0
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        self.alwaysOnTop = bool(package.read(1))
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.height = unpack("f", package.read(4))
+        self.id = int.from_bytes(package.read(8), "little")
+        self.materialId = int.from_bytes(package.read(4), "little")
+        if hasName:
+            self.name = A3DArray.readString(package)
+        self.originX = unpack("f", package.read(4))
+        self.originY = unpack("f", package.read(4))
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(4), "little")
+        self.perspectiveScale = bool(package.read(1))
+        self.rotation = unpack("f", package.read(4))
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.visible = bool(package.read(1))
+        self.width = unpack("f", package.read(4))
 
 class skin:
     def __init__(self):
-        pass
+        self.id = 0
+        self.indexBufferId = 0
+        self.jointBindTransforms = [] # A3D2JointBindTransform
+        self.joints = [] # int64
+        self.numJoints = [] # ushort
+        self.surfaces = [] # A3D2Surface
+        self.vertexBuffers = [] # int
+        self.visible = False
+
+        # Optional
+        self.boundBoxId = None
+        self.name = None
+        self.parentId = None
+        self.transform = None
+
+    def read(self, package, optionalMask):
+        hasBoundBoxId, hasName, hasParentId, hasTransform = optionalMask.getOptionals(4)
+
+        if hasBoundBoxId:
+            self.boundBoxId = int.from_bytes(package.read(4), "little")
+        self.id = int.from_bytes(package.read(8), "little")
+        self.indexBufferId = int.from_bytes(package.read(4), "little")
+        self.jointBindTransforms = A3DArray.readA3DObjectArray(package, jointBindTransform, optionalMask)
+        self.joints = A3DArray.readInt64Array(package)
+        if hasName:
+            self.name = A3DArray.readString(package)
+        self.numJoints = A3DArray.readInt16Array(package)
+        if hasParentId:
+            self.parentId = int.from_bytes(package.read(8), "little")
+        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        if hasTransform:
+            self.transform = transform()
+            self.transform.read(package, optionalMask)
+        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.visible = bool(package.read(1))
 
 class vertexBuffer:
     def __init__(self):
-        pass
+        self.attributes = [] # int
+        self.byteBuffer = b""
+        self.id = 0
+        self.vertexCount = 0
+
+    def read(self, package, optionalMask):
+        self.attributes = A3DArray.readIntArray(package)
+        self.byteBuffer = package.read(A3DArray.readArrayLength(package))
+        self.id = int.from_bytes(package.read(4), "little")
+        self.vertexCount = int.from_bytes(package.read(2), "little")
