@@ -29,19 +29,23 @@ class A3DOptionalMask:
         optionalMaskBytes = BytesIO(optionalMaskBytes)
         # Process first byte (the first byte is missing some bits on some null-mask configs)
         maskByte = int.from_bytes(optionalMaskBytes.read(1))
-        for bitI in range(8 - offset):
+        for bitI in range(7 - offset, -1, -1):
             self.optionalMask.append(
-                bool(maskByte & (2**bitI))
+                not bool(maskByte & (2**bitI))
             )
 
         # Process the rest of the bytes
         for maskByte in optionalMaskBytes.read():
-            for bitI in range(8):
+            for bitI in range(7, -1, -1):
                 self.optionalMask.append(
-                    bool(maskByte & (2**bitI))
+                    not bool(maskByte & (2**bitI))
                 )
 
-    def getOptionals(self, count=1):
+    def getOptional(self):
+        optional = self.optionalMask.pop(0)
+        return  optional
+
+    def getOptionals(self, count):
         optionals = ()
         for _ in range(count):
             optionals += (self.optionalMask.pop(0),)
