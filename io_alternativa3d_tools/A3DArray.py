@@ -25,27 +25,37 @@ from array import array
 
 def readArrayLength(package):
     print(f"Reading array @ package + {package.tell()}")
-    arrayField = int.from_bytes(package.read(1), "little")
-    arrayLengthType = arrayField & 128
     arrayLength = 0
+
+    arrayField = int.from_bytes(package.read(1), "little")
+    arrayLengthType = arrayField & 0b10000000
+    # Short array length
     if arrayLengthType == 0:
-        # Short array: 7 bit size
-        print("> Short array")
-        arrayLength += arrayField & 127
-    else:
-        # Long array: 6 bits + 1-2 bytes
-        print("> Long array")
-        byteCount = ((arrayField & 64) >> 7)
-        print(f">> Byte count: {byteCount + 1}")
-        arrayLength += (arrayField & 63) << (8 * byteCount)
-        arrayLength += int.from_bytes(package.read(byteCount + 1), "little")
-    print(f"> Length: {arrayLength}")
+        print("> Short array length")
+        # Length of the array is contained in the last 7 bits of this byte
+        arrayLength = arrayField
+    else: # Must be large array length
+        print("> Long array length")
+        longArrayLengthType = arrayField & 0b01000000
+        # Length in last 6 bits + next byte
+        if longArrayLengthType == 0:
+            print("Ll")
+            lengthByte = int.from_bytes(package.read(1), "little")
+            arrayLength = (arrayField & 0b00111111) << 8
+            arrayLength += lengthByte
+        else: # Length in last 6 bits + next 2 bytes
+            print("LL")
+            lengthBytes = int.from_bytes(package.read(2), "big")
+            arrayLength = (arrayField & 0b00111111) << 16
+            arrayLength += lengthBytes
+
+    print(f"array len: {arrayLength}")
     return arrayLength
 
 def readA3DObjectArray(package, objReader, optionalMask):
     length = readArrayLength(package)
     objects = []
-    for _ in range(keyFrameCount):
+    for _ in range(length):
         obj = objReader()
         obj.read(package, optionalMask)
         objects.append(obj)
@@ -57,7 +67,9 @@ Common types
 '''
 def readString(package):
     stringLength = readArrayLength(package)
-    string = package.read(stringLength).decode("utf-8")
+    string = package.read(stringLength)
+    string = string.decode("utf-8")
+    print(string)
 
     return string
 

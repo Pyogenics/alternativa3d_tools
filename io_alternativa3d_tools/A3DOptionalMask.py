@@ -27,7 +27,7 @@ class A3DOptionalMask:
         self.optionalMask = []
 
         optionalMaskBytes = BytesIO(optionalMaskBytes)
-        # Process first byte (the first byte is missing some bits on some null-mask configs)
+        # Process first byte (the first byte is missing some bits on some nullmask configs)
         maskByte = int.from_bytes(optionalMaskBytes.read(1))
         for bitI in range(7 - offset, -1, -1):
             self.optionalMask.append(
@@ -41,12 +41,17 @@ class A3DOptionalMask:
                     not bool(maskByte & (2**bitI))
                 )
 
+        print(f"Optional mask count: {len(self.optionalMask)}")
+
     def getOptional(self):
         optional = self.optionalMask.pop(0)
-        return  optional
+        return optional
 
     def getOptionals(self, count):
         optionals = ()
         for _ in range(count):
             optionals += (self.optionalMask.pop(0),)
         return optionals
+
+    def getLength(self):
+        return len(self.optionalMask)
