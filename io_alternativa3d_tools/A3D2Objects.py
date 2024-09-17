@@ -22,12 +22,12 @@ SOFTWARE.
 
 from struct import unpack
 
-from . import A3DArray
+from . import AlternativaProtocol
 
 '''
-Support objects, objects used by other objects
+Objects
 '''
-class matrix:
+class A3D2Matrix:
     def __init__(self):
         self.a = 0.0
         self.b = 0.0
@@ -83,7 +83,7 @@ class surface:
         self.numTriangles = int.from_bytes(package.read(4), "little")
 
 '''
-File objects, these objects are contained in A3DArrays in every file
+Main objects
 '''
 class ambientLight:
     def __init__(self):
@@ -105,7 +105,7 @@ class ambientLight:
             self.boundBoxId = int.from_bytes(package.read(4), "little")
         self.color, self.id, self.intensity = unpack(">Iqf", package.read(4+8+4))
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -129,10 +129,10 @@ class animationClip:
         self.id = int.from_bytes(package.read(4), "little")
         self.loop = bool(package.read(1))
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.objectIDs = A3DArray.readInt64Array(package)
-        self.tracks = A3DArray.readIntArray(package)
+            self.objectIDs = AlternativaProtocol.readInt64Array(package)
+        self.tracks = AlternativaProtocol.readIntArray(package)
 
         print(f"animationClip\n> id: {self.id} loop: {self.loop} tracks: {self.tracks} name: {self.name} objectIDs: {self.objectIDs}")
 
@@ -144,7 +144,7 @@ class animationTrack:
 
     def read(self, package, optionalMask):
         self.id = int.from_bytes(package.read(4), "little")
-        self.keyFrames = A3DArray.readA3DObjectArray(package, keyFrame, optionalMask)
+        self.keyFrames = AlternativaProtocol.readObjectArray(package, keyFrame, optionalMask)
         
         print(f"animationTrack\n> id: {self.id} keyFrames: {self.keyFrames} objectName: {self.objectName}")
 
@@ -154,7 +154,7 @@ class box:
         self.id = 0
 
     def read(self, package, optionalMask):
-        self.bounds = A3DArray.readFloatArray(package)
+        self.bounds = AlternativaProtocol.readFloatArray(package)
         self.id = int.from_bytes(package.read(4), "little")
 
         print(f"box\n> bounds: {self.bounds} id: {self.id}")
@@ -208,16 +208,16 @@ class decal:
         self.id = int.from_bytes(package.read(8), "little")
         self.indexBufferId = int.from_bytes(package.read(4), "little")
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.offset = unpack("f", package.read(4))
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
         if optionalMask.getOptional():
             self.transform = transform()
             self.transform.read(package, optionalMask)
-        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
 class directionalLight:
@@ -240,7 +240,7 @@ class directionalLight:
         self.id = int.from_bytes(package.read(8), "little")
         self.intensity = unpack("f", package.read(4))
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -255,7 +255,7 @@ class image:
 
     def read(self, package, optionalMask):
         self.id = int.from_bytes(package.read(4), "little")
-        self.url = A3DArray.readString(package)
+        self.url = AlternativaProtocol.readString(package)
 
 class indexBuffer:
     def __init__(self):
@@ -265,7 +265,7 @@ class indexBuffer:
 
     def read(self, package, optionalMask):
         self.byteBuffer = package.read(
-            A3DArray.readArrayLength(package)
+            AlternativaProtocol.readArrayLength(package)
         )
         self.id = int.from_bytes(package.read(4), "little")
         self.indexCount = int.from_bytes(package.read(4), "little")
@@ -286,7 +286,7 @@ class joint:
             self.boundBoxId = int.from_bytes(package.read(4), "little")
         self.id = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -359,14 +359,14 @@ class mesh:
         self.id = int.from_bytes(package.read(8), "little")
         self.indexBufferId = int.from_bytes(package.read(4), "little")
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
         if optionalMask.getOptional():
             self.transform = transform()
             self.transform.read(package, optionalMask)
-        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
 class object:
@@ -385,7 +385,7 @@ class object:
             self.boundBoxId = int.from_bytes(package.read(4), "little")
         self.id = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -417,7 +417,7 @@ class omniLight:
         self.id = int.from_bytes(package.read(8), "little")
         self.intensity = unpack("f", package.read(4))
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -455,7 +455,7 @@ class spotLight:
         self.id = int.from_bytes(package.read(8), "little")
         self.intensity = unpack("f", package.read(4))
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
         if optionalMask.getOptional():
@@ -490,7 +490,7 @@ class sprite:
         self.id = int.from_bytes(package.read(8), "little")
         self.materialId = int.from_bytes(package.read(4), "little")
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
+            self.name = AlternativaProtocol.readString(package)
         self.originX = unpack("f", package.read(4))
         self.originY = unpack("f", package.read(4))
         if optionalMask.getOptional():
@@ -525,18 +525,18 @@ class skin:
             self.boundBoxId = int.from_bytes(package.read(4), "little")
         self.id = int.from_bytes(package.read(8), "little")
         self.indexBufferId = int.from_bytes(package.read(4), "little")
-        self.jointBindTransforms = A3DArray.readA3DObjectArray(package, jointBindTransform, optionalMask)
-        self.joints = A3DArray.readInt64Array(package)
+        self.jointBindTransforms = AlternativaProtocol.readObjectArray(package, jointBindTransform, optionalMask)
+        self.joints = AlternativaProtocol.readInt64Array(package)
         if optionalMask.getOptional():
-            self.name = A3DArray.readString(package)
-        self.numJoints = A3DArray.readInt16Array(package)
+            self.name = AlternativaProtocol.readString(package)
+        self.numJoints = AlternativaProtocol.readInt16Array(package)
         if optionalMask.getOptional():
             self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = A3DArray.readA3DObjectArray(package, surface, optionalMask)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
         if optionalMask.getOptional():
             self.transform = transform()
             self.transform.read(package, optionalMask)
-        self.vertexBuffers = A3DArray.readIntArray(package)
+        self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
 class vertexBuffer:
@@ -547,7 +547,7 @@ class vertexBuffer:
         self.vertexCount = 0
 
     def read(self, package, optionalMask):
-        self.attributes = A3DArray.readIntArray(package)
-        self.byteBuffer = package.read(A3DArray.readArrayLength(package))
+        self.attributes = AlternativaProtocol.readIntArray(package)
+        self.byteBuffer = package.read(AlternativaProtocol.readArrayLength(package))
         self.id = int.from_bytes(package.read(4), "little")
         self.vertexCount = int.from_bytes(package.read(2), "little")
