@@ -20,8 +20,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
-from . import A3DArray
+from . import AlternativaProtocol
 
+'''
+Objects
+'''
 class box:
 	def __init__(self):
 		# Optional
@@ -29,11 +32,9 @@ class box:
 		self.id = None
 
 	def read(self, package, optionalMask):
-		hasBounds, hasId = optionalMask.getOptionals(2)
-
-		if hasBounds:
+		if optionalMask.getOptional():
 			self.bounds = A3DArray.readFloatArray(package)
-		if hasId:
+		if optionalMask.getOptional():
 			self.id = int.from_bytes(package.read(4), "little")
 
 class geometry:
@@ -153,7 +154,7 @@ class object:
 		if hasName:
 			self.name = A3DArray.readString(package)
 		if hasParentId:
-			self.parentId = int.from_bytes(package.read(4), "little")4
+			self.parentId = int.from_bytes(package.read(4), "little")
 		if hasSurfaces:
 			self.surfaces = A3DArray.readA3DObjectArray(package, surface)
 		if hasTransformation:
@@ -161,3 +162,57 @@ class object:
 			self.transformation.read(package, optionalMask)
 		if hasVisible:
 			self.visible = bool(package.read(1))
+
+class indexBuffer:
+	def __init__(self):
+		self.indexCount = 0
+
+		# Optional
+		self.byteBuffer = None
+
+	def read(self, package, optionalMask):
+		if optionalMask.getOptional():
+			self.byteBuffer = package.read(
+        		A3DArray.readArrayLength(package)
+			)
+		self.indexCount = int.from_bytes(package.read(4), "little")
+
+class vertexBuffer:
+	def __init__(self):
+		self.vertexCount = 0
+
+		# Optional
+		self.attributes = None # [Byte]
+		self.byteBuffer = None # Bytes
+
+	def read(self, package, optionalMask):
+		if optionalMask.getOptional():
+			self.attributes = package.read(
+        		A3DArray.readArrayLength(package)
+			)
+		if optionalMask.getOptional:
+			self.byteBuffer = package.read(
+        		A3DArray.readArrayLength(package)
+			)
+		self.vertexCount = int.from_bytes(package.read(4), "little")
+
+'''
+Main
+'''
+class A3D1:
+	def __init__(self):
+		self.boxes = []
+		self.geometries = []
+		self.images = []
+		self.maps = []
+		self.materials = []
+		self.objects = []
+	
+	'''
+	Drivers
+	'''
+	def read(self, stream):
+		print("Reading A3D1")
+	
+	def write(self, stream):
+		print("Writing A3D1")

@@ -28,35 +28,33 @@ class OptionalMask:
     def __init__(self):
         self.optionalMask = []
 
-    def read(self, package):
+    def read(self, stream):
+        print("Read optional mask")
         # Read "Null-mask" field
         nullMask = b""
         nullMaskOffset = 0
 
-        nullMaskField = int.from_bytes(package.read(1), "little")
+        nullMaskField = int.from_bytes(stream.read(1), "little")
         nullMaskType = nullMaskField & 0b10000000
         if nullMaskType == 0:
             # Short null-mask: 5-29 bits
-            print("Short nullmask")
             nullMaskLength = nullMaskField & 0b01100000
             
             nullMask += bytes(nullMaskField & 0b00011111)
-            nullMask += package.read(nullMaskLength) # 1,2 or 3 bytes
+            nullMask += stream.read(nullMaskLength) # 1,2 or 3 bytes
             nullMaskOffset = 3
         else:
             # Long null-mask: 64 - 4194304 bytes
-            print("Long nullmask")
             nullMaskLengthSize = nullMaskField & 0b01000000
             nullMaskLength = nullMaskField & 0b0011111
             if nullMaskLengthSize == 1:
                 # Long length: 22 bits
-                print("> Long length")
-                nullMaskLength += int.from_bytes(package.read(2), "little")
+                nullMaskLength += int.from_bytes(stream.read(2), "little")
             else:
                 # Short length: 6 bits
-                print("> Short length")
+                pass
                 
-            nullMask += package.read(nullMaskLength)
+            nullMask += stream.read(nullMaskLength)
             nullMaskOffset = 0
 
         nullMask = BytesIO(nullMask)
@@ -74,7 +72,7 @@ class OptionalMask:
                     not bool(maskByte & (2**bitI))
                 )
 
-        print(f"Optional mask count: {len(self.optionalMask)}")
+        print(f"Optional mask flags: {len(self.optionalMask)}")
 
     def getOptional(self):
         optional = self.optionalMask.pop(0)
@@ -93,32 +91,26 @@ class OptionalMask:
 Array
 '''
 def readArrayLength(package):
-    print(f"Reading array @ package + {package.tell()}")
     arrayLength = 0
 
     arrayField = int.from_bytes(package.read(1), "little")
     arrayLengthType = arrayField & 0b10000000
     # Short array length
     if arrayLengthType == 0:
-        print("> Short array length")
         # Length of the array is contained in the last 7 bits of this byte
         arrayLength = arrayField
     else: # Must be large array length
-        print("> Long array length")
         longArrayLengthType = arrayField & 0b01000000
         # Length in last 6 bits + next byte
         if longArrayLengthType == 0:
-            print("Ll")
             lengthByte = int.from_bytes(package.read(1), "little")
             arrayLength = (arrayField & 0b00111111) << 8
             arrayLength += lengthByte
         else: # Length in last 6 bits + next 2 bytes
-            print("LL")
             lengthBytes = int.from_bytes(package.read(2), "big")
             arrayLength = (arrayField & 0b00111111) << 16
             arrayLength += lengthBytes
 
-    print(f"array len: {arrayLength}")
     return arrayLength
 
 def readObjectArray(package, objReader, optionalMask):
@@ -135,7 +127,6 @@ def readString(package):
     stringLength = readArrayLength(package)
     string = package.read(stringLength)
     string = string.decode("utf-8")
-    print(string)
 
     return string
 
