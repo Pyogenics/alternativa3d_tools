@@ -23,6 +23,7 @@ SOFTWARE.
 from struct import unpack
 
 from . import AlternativaProtocol
+from .IOTools import unpackStream
 
 '''
 Objects
@@ -43,32 +44,32 @@ class A3D2Matrix:
         self.l = 0.0
 
     def read(self, package, optionalMask):
-        self.a, self.b, self.c = unpack("3f", package.read(4*3))
-        self.d, self.e, self.f = unpack("3f", package.read(4*3))
-        self.g, self.h, self.i = unpack("3f", package.read(4*3))
-        self.j, self.k, self.l = unpack("3f", package.read(4*3))
+        self.a, self.b, self.c = unpackStream("<3f", package)
+        self.d, self.e, self.f = unpackStream("<3f", package)
+        self.g, self.h, self.i = unpackStream("<3f", package)
+        self.j, self.k, self.l = unpackStream("<3f", package)
 
-class transform:
+class A3D2Transform:
     def __init__(self):
         self.matrix = None
 
     def read(self, package, optionalMask):
         print(f"read transform: {package.tell()}")
-        self.matrix = matrix()
+        self.matrix = A3D2Matrix()
         self.matrix.read(package, optionalMask)
         print(f"transform: {package.tell()}")
 
-class keyFrame:
+class A3D2KeyFrame:
     def __init__(self):
         self.time = 0.0
-        self.transform = None # A3DMatrix
+        self.transform = None # A3D2Transform
 
     def read(self, package, optionalMask):
-        self.time = unpack("f", package.read(4))
-        self.transform = transform()
+        self.time, = unpackStream("<f", package)
+        self.transform = A3D2Transform()
         self.transform.read(package, optionalMask)
 
-class surface:
+class A3D2Surface:
     def __init__(self):
         self.indexBegin = 0
         self.numTriangles = 0
@@ -77,15 +78,15 @@ class surface:
         self.materialId = None
 
     def read(self, package, optionalMask):
-        self.indexBegin = int.from_bytes(package.read(4), "little")
+        self.indexBegin, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.materialId = int.from_bytes(package.read(4), "little")
-        self.numTriangles = int.from_bytes(package.read(4), "little")
+            self.materialId, = unpackStream("<I", package)
+        self.numTriangles, = unpackStream("<I", package)
 
 '''
 Main objects
 '''
-class ambientLight:
+class A3D2AmbientLight:
     def __init__(self):
         self.color = 0
         self.id = 0
@@ -102,20 +103,20 @@ class ambientLight:
         print(f"reading ambientLight @ {package.tell()}")
         
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.color, self.id, self.intensity = unpack(">Iqf", package.read(4+8+4))
+            self.boundBoxId, = unpackStream("<I", package)
+        self.color, self.id, self.intensity = unpackStream("<IQf", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
 
         print(f"ambientLight\n> boundBoxId: {self.boundBoxId} color: {self.color} id: {self.id} intensity: {self.intensity} visible: {self.visible} name: {self.name} @ {package.tell()}")
 
-class animationClip:
+class A3D2AnimationClip:
     def __init__(self):
         self.id = 0
         self.loop = False
@@ -126,7 +127,7 @@ class animationClip:
         self.objectIDs = None # Int64
     
     def read(self, package, optionalMask):
-        self.id = int.from_bytes(package.read(4), "little")
+        self.id, = unpackStream("<I", package)
         self.loop = bool(package.read(1))
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
@@ -136,30 +137,30 @@ class animationClip:
 
         print(f"animationClip\n> id: {self.id} loop: {self.loop} tracks: {self.tracks} name: {self.name} objectIDs: {self.objectIDs}")
 
-class animationTrack:
+class A3D2AnimationTrack:
     def __init__(self):
         self.id = 0
         self.keyFrames = [] # A3D2Keyframe
         self.objectName = ""
 
     def read(self, package, optionalMask):
-        self.id = int.from_bytes(package.read(4), "little")
+        self.id, = unpackStream("<I", package)
         self.keyFrames = AlternativaProtocol.readObjectArray(package, keyFrame, optionalMask)
         
         print(f"animationTrack\n> id: {self.id} keyFrames: {self.keyFrames} objectName: {self.objectName}")
 
-class box:
+class A3D2Box:
     def __init__(self):
         self.bounds = [] # float
         self.id = 0
 
     def read(self, package, optionalMask):
         self.bounds = AlternativaProtocol.readFloatArray(package)
-        self.id = int.from_bytes(package.read(4), "little")
+        self.id, = unpackStream("<I", package)
 
         print(f"box\n> bounds: {self.bounds} id: {self.id}")
 
-class cubeMap:
+class A3D2CubeMap:
     def __init__(self):
         self.id = 0
         self.topId = 0
@@ -173,21 +174,21 @@ class cubeMap:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.backId = int.from_bytes(package.read(4), "little")
+            self.backId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.bottomId = int.from_bytes(package.read(4), "little")
+            self.bottomId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.frontId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(4), "little")
+            self.frontId, = unpackStream("<I", package)
+        self.id, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.leftId = int.from_bytes(package.read(4), "little")
+            self.leftId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.rightId = int.from_bytes(package.read(4), "little")
-        self.topId = int.from_bytes(package.read(4), "little")
+            self.rightId, = unpackStream("<I", package)
+        self.topId, = unpackStream("<I", package)
 
         print(f"cubeMap:\n> backId: {self.backId} bottomId: {self.bottomId} frontId: {self.frontId} id: {self.id} leftId: {self.leftId} rightId: {self.rightId} topId: {self.topId}")
 
-class decal:
+class A3D2Decal:
     def __init__(self):
         self.id = 0
         self.indexBufferId = 0
@@ -204,23 +205,22 @@ class decal:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
-        self.indexBufferId = int.from_bytes(package.read(4), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.id, self.indexBufferId = unpackStream("<QI", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.offset = unpack("f", package.read(4))
+            self.offset = unpackStream("<f", package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
+            self.parentId, = unpackStream("<Q", package)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, A3D2Surface, optionalMask)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
-class directionalLight:
+class A3D2DirectionalLight:
     def __init__(self):
         self.color = 0
         self.id = 0
@@ -235,29 +235,27 @@ class directionalLight:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.color = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
-        self.intensity = unpack("f", package.read(4))
+            self.boundBoxId, = unpackStream("<I", package)
+        self.color, self.id, self.intensity = unpackStream("<IQf", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
 
-class image:
+class A3D2Image:
     def __init__(self):
         self.id = 0
         self.url = ""
 
     def read(self, package, optionalMask):
-        self.id = int.from_bytes(package.read(4), "little")
+        self.id, = unpackStream("<I", package)
         self.url = AlternativaProtocol.readString(package)
 
-class indexBuffer:
+class A3D2IndexBuffer:
     def __init__(self):
         self.byteBuffer = b""
         self.id = 0
@@ -267,10 +265,10 @@ class indexBuffer:
         self.byteBuffer = package.read(
             AlternativaProtocol.readArrayLength(package)
         )
-        self.id = int.from_bytes(package.read(4), "little")
-        self.indexCount = int.from_bytes(package.read(4), "little")
+        self.id, = unpackStream("<I", package)
+        self.indexCount, = unpackStream("<I", package)
 
-class joint:
+class A3D2Joint:
     def __init__(self):
         self.id = 0
         self.visible = False
@@ -283,31 +281,29 @@ class joint:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.id, = unpackStream("<Q", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
         print(f"IndexBuffer\n> boundBoxId: {self.boundBoxId} id: {self.id} name: {self.name} parentId: {self.parentId} transform: {self.transform} visible: {self.visible}")
 
-class map:
+class A3D2Map:
     def __init__(self):
         self.channel = 0
         self.id = 0
         self.imageId = 0
 
     def read(self, package, optionalMask):
-        self.channel = int.from_bytes(package.read(2), "little")
-        self.id = int.from_bytes(package.read(4), "little")
-        self.imageId = int.from_bytes(package.read(4), "little")
+        self.channel, self.id, self.imageId = unpackStream("<H2I", package)
         print(f"map\n> channel: {self.channel} id: {self.id} imageId: {self.imageId}")
 
-class material:
+class A3D2Material:
     def __init__(self):
         self.id = 0
 
@@ -322,24 +318,24 @@ class material:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.diffuseMapId = int.from_bytes(package.read(4), "little")
+            self.diffuseMapId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.glossinessMapId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(4), "little")
+            self.glossinessMapId, = unpackStream("<I", package)
+        self.id, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.lightMapId = int.from_bytes(package.read(4), "little")
+            self.lightMapId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.normalMapId = int.from_bytes(package.read(4), "little")
+            self.normalMapId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.opacityMapId = int.from_bytes(package.read(4), "little")
+            self.opacityMapId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.reflectionCubeMapId = int.from_bytes(package.read(4), "little")
+            self.reflectionCubeMapId, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.specularMapId = int.from_bytes(package.read(4), "little")
+            self.specularMapId, = unpackStream("<I", package)
 
         print(f"material\n> diffuseMapId: {self.diffuseMapId} glossinessMapId: {self.glossinessMapId} id: {self.id} lightMapId: {self.lightMapId} normalMapId: {self.normalMapId} opacityMapId: {self.opacityMapId} reflectionCubeMapId: {self.reflectionCubeMapId} specularMapId: {self.specularMapId}")
 
-class mesh:
+class A3D2Mesh:
     def __init__(self):
         self.id = 0
         self.indexBufferId = 0
@@ -355,21 +351,20 @@ class mesh:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
-        self.indexBufferId = int.from_bytes(package.read(4), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.id, self.indexBufferId = unpackStream("<QI", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
+            self.parentId, = unpackStream("<Q", package)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, A3D2Surface, optionalMask)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
-class object:
+class A3D2Object:
     def __init__(self):
         self.id = 0
         self.visible = False
@@ -382,18 +377,18 @@ class object:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.id, = unpackStream("<Q", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
 
-class omniLight:
+class A3D2OmniLight:
     def __init__(self):
         self.attenuationBegin = 0.0
         self.attenuationEnd = 0.0
@@ -409,23 +404,20 @@ class omniLight:
         self.transform = None
 
     def read(self, package, optionalMask):
-        self.attenuationBegin = unpack("f", package.read(4))
-        self.attenuationEnd = unpack("f", package.read(4))
+        self.attenuationBegin, self.attenuationEnd = unpackStream("<2f", package)
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.color = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
-        self.intensity = unpack("f", package.read(4))
+            self.boundBoxId, = unpackStream("<I", package)
+        self.color, self.id, self.intensity = unpackStream("<IQf", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
 
-class spotLight:
+class A3D2SpotLight:
     def __init__(self):
         self.attenuationBegin = 0.0
         self.attenuationEnd = 0.0
@@ -443,27 +435,25 @@ class spotLight:
         self.transform = None
 
     def read(self, package, optionalMask):
-        self.attenuationBegin = unpack("f", package.read(4))
-        self.attenuationEnd = unpack("f", package.read(4))
+        self.attenuationBegin, self.attenuationEnd = unpackStream("<2f", package)
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.color = int.from_bytes(package.read(4), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.color, = unpackStream("<I", package)
         if optionalMask.getOptional():
-            self.falloff = unpack("f", package.read(4))
+            self.falloff = unpackStream("<f", package)
         if optionalMask.getOptional():
-            self.hotspot = unpack("f", package.read(4))
-        self.id = int.from_bytes(package.read(8), "little")
-        self.intensity = unpack("f", package.read(4))
+            self.hotspot = unpackStream("<f", package)
+        self.id, self.intensity = unpackStream("<Qf", package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
+            self.parentId, = unpackStream("<Q", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
 
-class sprite:
+class A3D2Sprite:
     def __init__(self):
         self.alwaysOnTop = False
         self.height = 0.0
@@ -485,25 +475,22 @@ class sprite:
     def read(self, package, optionalMask):
         self.alwaysOnTop = bool(package.read(1))
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.height = unpack("f", package.read(4))
-        self.id = int.from_bytes(package.read(8), "little")
-        self.materialId = int.from_bytes(package.read(4), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.height, self.id, self.materialId = unpackStream("<fQI")
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
-        self.originX = unpack("f", package.read(4))
-        self.originY = unpack("f", package.read(4))
+        self.originX, self.originY = unpackStream("<2f", package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(4), "little")
+            self.parentId, = unpackStream("<I", package)
         self.perspectiveScale = bool(package.read(1))
-        self.rotation = unpack("f", package.read(4))
+        self.rotation, = unpackStream("<f", package)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.visible = bool(package.read(1))
-        self.width = unpack("f", package.read(4))
+        self.width, = unpackStream("<f", package)
 
-class skin:
+class A3D2Skin:
     def __init__(self):
         self.id = 0
         self.indexBufferId = 0
@@ -522,24 +509,23 @@ class skin:
 
     def read(self, package, optionalMask):
         if optionalMask.getOptional():
-            self.boundBoxId = int.from_bytes(package.read(4), "little")
-        self.id = int.from_bytes(package.read(8), "little")
-        self.indexBufferId = int.from_bytes(package.read(4), "little")
+            self.boundBoxId, = unpackStream("<I", package)
+        self.id, self.indexBufferId = unpackStream("<QI", package)
         self.jointBindTransforms = AlternativaProtocol.readObjectArray(package, jointBindTransform, optionalMask)
         self.joints = AlternativaProtocol.readInt64Array(package)
         if optionalMask.getOptional():
             self.name = AlternativaProtocol.readString(package)
         self.numJoints = AlternativaProtocol.readInt16Array(package)
         if optionalMask.getOptional():
-            self.parentId = int.from_bytes(package.read(8), "little")
-        self.surfaces = AlternativaProtocol.readObjectArray(package, surface, optionalMask)
+            self.parentId, = unpackStream("<Q", package)
+        self.surfaces = AlternativaProtocol.readObjectArray(package, A3D2Surface, optionalMask)
         if optionalMask.getOptional():
-            self.transform = transform()
+            self.transform = A3D2Transform()
             self.transform.read(package, optionalMask)
         self.vertexBuffers = AlternativaProtocol.readIntArray(package)
         self.visible = bool(package.read(1))
 
-class vertexBuffer:
+class A3D2VertexBuffer:
     def __init__(self):
         self.attributes = [] # int
         self.byteBuffer = b""
@@ -549,5 +535,4 @@ class vertexBuffer:
     def read(self, package, optionalMask):
         self.attributes = AlternativaProtocol.readIntArray(package)
         self.byteBuffer = package.read(AlternativaProtocol.readArrayLength(package))
-        self.id = int.from_bytes(package.read(4), "little")
-        self.vertexCount = int.from_bytes(package.read(2), "little")
+        self.id, self.vertexCount = unpackStream("<IH", package)

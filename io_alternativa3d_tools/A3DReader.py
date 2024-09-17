@@ -25,6 +25,7 @@ from io import BytesIO
 
 from . import A3D2Objects
 from . import AlternativaProtocol
+from .IOTools import unpackStream
 
 def readPackage(file):
     # Read "Package Length" field
@@ -61,8 +62,7 @@ def readPackage(file):
 
 def readVersion(package):
     # Read "version" field
-    versionMajor = int.from_bytes(package.read(2), "big")
-    versionMinor = int.from_bytes(package.read(2), "big")
+    versionMajor, versionMinor = unpackStream(">2H", package)
     print(f"A3D version: {versionMajor}.{versionMinor}")
 
     return (versionMajor, versionMinor)
@@ -72,115 +72,115 @@ def readObjects(package, nullMask):
     hasAmbientLights = nullMask.getOptional()
     print(f"## AmbientLights {hasAmbientLights}")
     if hasAmbientLights:
-        ambientLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.ambientLight, nullMask)
+        ambientLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2AmbientLight, nullMask)
 
     animationClips = []
     hasAnimationClips = nullMask.getOptional()
     print(f"## AnimationClips {hasAnimationClips}")
     if hasAnimationClips:
-        animationClips = AlternativaProtocol.readObjectArray(package, A3D2Objects.animationClip, nullMask)
+        animationClips = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2AnimationClip, nullMask)
 
     animationTracks = []
     hasAnimationTracks = nullMask.getOptional()
     print(f"## AnimationTracks {hasAnimationTracks}")
     if hasAnimationTracks:
-        animationTracks = AlternativaProtocol.readObjectArray(package, A3D2Objects.animationTrack, nullMask)
+        animationTracks = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2AnimationTrack, nullMask)
 
     boxes = []
     hasBoxes = nullMask.getOptional()
     print(f"## Boxes {hasBoxes}")
     if hasBoxes:
-        boxes = AlternativaProtocol.readObjectArray(package, A3D2Objects.box, nullMask)
+        boxes = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Box, nullMask)
 
     cubeMaps = []
     hasCubeMaps = nullMask.getOptional()
     print(f"## CubeMaps {hasCubeMaps}")
     if hasCubeMaps:
-        cubeMaps = AlternativaProtocol.readObjectArray(package, A3D2Objects.cubeMaps, nullMask)
+        cubeMaps = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2CubeMap, nullMask)
 
     decals = []
     hasDecals = nullMask.getOptional()
     print(f"## Decals {hasDecals}")
     if hasDecals:
-        decals = AlternativaProtocol.readObjectArray(package, A3D2Objects.decal, nullMask)
+        decals = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Decal, nullMask)
 
     directionalLights = []
     hasDirectionalLights = nullMask.getOptional()
     print(f"## DirectionalLights {hasDirectionalLights}")
     if hasDirectionalLights:
-        directionalLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.directionalLight, nullMask)
+        directionalLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2DirectionalLight, nullMask)
 
     images = []
     hasImages = nullMask.getOptional()
     print(f"## Images {hasImages}")
     if hasImages:
-        images = AlternativaProtocol.readObjectArray(package, A3D2Objects.image, nullMask)
+        images = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Image, nullMask)
 
     indexBuffers = []
     hasIndexBuffers = nullMask.getOptional()
     print(f"## IndexBuffers {hasIndexBuffers}")
     if hasIndexBuffers:
-        indexBuffers = AlternativaProtocol.readObjectArray(package, A3D2Objects.indexBuffer, nullMask)
+        indexBuffers = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2IndexBuffer, nullMask)
 
     joints = []
     hasJoints = nullMask.getOptional()
     print(f"## Joints {hasJoints}")
     if hasJoints:
-        joints = AlternativaProtocol.readObjectArray(package, A3D2Objects.joint, nullMask)
+        joints = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Joint, nullMask)
 
     maps = []
     hasMaps = nullMask.getOptional()
     print(f"## Maps {hasMaps}")
     if hasMaps:
-        maps = AlternativaProtocol.readObjectArray(package, A3D2Objects.map, nullMask)
+        maps = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Map, nullMask)
 
     materials = []
     hasMaterials = nullMask.getOptional()
     print(f"## Materials {hasMaterials}")
     if hasMaterials:
-        materials = AlternativaProtocol.readObjectArray(package, A3D2Objects.material, nullMask)
+        materials = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Material, nullMask)
 
     meshes = []
     hasMeshes = nullMask.getOptional()
     print(f"## Meshes {hasMeshes}")
     if hasMeshes:
-        meshes = AlternativaProtocol.readObjectArray(package, A3D2Objects.mesh, nullMask)
+        meshes = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Mesh, nullMask)
 
     objects = []
     hasObjects = nullMask.getOptional()
     print(f"## Objects {hasObjects}")
     if hasObjects:
-        objects = AlternativaProtocol.readObjectArray(package, A3D2Objects.object, nullMask)
+        objects = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Object, nullMask)
 
     omniLights = []
     hasOmniLights = nullMask.getOptional()
     print(f"## OmniLights {hasOmniLights}")
     if hasOmniLights:
-        omniLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.omniLight, nullMask)
+        omniLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2OmniLight, nullMask)
 
     spotLights = []
     hasSpotLights = nullMask.getOptional()
     print(f"## SpotLights {hasSpotLights}")
     if hasSpotLights:
-        spotLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.spotLight, nullMask)
+        spotLights = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2SpotLight, nullMask)
 
     sprites = []
     hasSprites = nullMask.getOptional()
     print(f"## Sprites {hasSprites}")
     if hasSprites:
-        sprites = AlternativaProtocol.readObjectArray(package, A3D2Objects.sprite, nullMask)
+        sprites = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Sprite, nullMask)
 
     skins = []
     hasSkins = nullMask.getOptional()
     print(f"## Skins {hasSkins}")
     if hasSkins:
-        skins = AlternativaProtocol.readObjectArray(package, A3D2Objects.skin, nullMask)
+        skins = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2Skin, nullMask)
 
     vertexBuffers = []
     hasVertexBuffers = nullMask.getOptional()
     print(f"## Vertex buffers {hasVertexBuffers}")
     if hasVertexBuffers:
-        vertexBuffers = AlternativaProtocol.readObjectArray(package, A3D2Objects.vertexBuffer, nullMask)
+        vertexBuffers = AlternativaProtocol.readObjectArray(package, A3D2Objects.A3D2VertexBuffer, nullMask)
 
     return [] #TODO
 
