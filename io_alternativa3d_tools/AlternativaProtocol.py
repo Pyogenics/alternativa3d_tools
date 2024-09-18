@@ -112,8 +112,6 @@ def readArrayLength(package):
             arrayLength = (arrayField & 0b00111111) << 16
             arrayLength += lengthBytes
 
-    print(f"Arr length: {arrayLength}")
-
     return arrayLength
 
 def readObjectArray(package, objReader, optionalMask):
@@ -156,7 +154,7 @@ def readInt64Array(package):
 
 def readFloatArray(package):
     length = readArrayLength(package)
-    floats = unpack(f"<{length}f", package.read(length*4))
+    floats = unpack(f"{length}f", package.read(length*4))
     floats = array("f", floats)
 
     return floats

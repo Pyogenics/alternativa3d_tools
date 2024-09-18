@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+from io import BytesIO
+
 from . import AlternativaProtocol
 from .IOTools import unpackStream
 from .A3D2 import A3D2Matrix # XXX
@@ -45,6 +47,17 @@ class A3D1IndexBuffer:
         # Optional
         self.byteBuffer = None
 
+        self.faces = []
+
+    def composeFaces(self):
+        if self.byteBuffer == None:
+            return
+
+        byteBuffer = BytesIO(self.byteBuffer)
+        for _ in range(self.indexCount//3):
+            face = unpackStream("<3H", byteBuffer)
+            self.faces.append(face)
+
     def read(self, stream, optionalMask):
         print("Read IndexBuffer")
         if optionalMask.getOptional():
@@ -53,6 +66,9 @@ class A3D1IndexBuffer:
             )
         self.indexCount, = unpackStream(">I", stream)
 
+        # Process our data
+        self.composeFaces()
+
 class A3D1VertexBuffer:
     def __init__(self):
         self.vertexCount = 0
@@ -60,6 +76,46 @@ class A3D1VertexBuffer:
         # Optional
         self.attributes = None # Bytes
         self.byteBuffer = None # Bytes
+
+        # Vertices
+        self.positions = []
+        self.normals = []
+        self.tangents = []
+        self.joints = []
+        self.UV0 = []
+        self.UV1 = []
+
+    def composeVertices(self):
+        if self.attributes == None or self.byteBuffer == None:
+            return
+        
+        byteBuffer = BytesIO(self.byteBuffer)
+        for _ in range(self.vertexCount):
+            for attribute in self.attributes:
+                if attribute == 0:
+                    self.positions.append(
+                        unpackStream("<3f", byteBuffer)
+                    )
+                elif attribute == 1:
+                    self.normals.append(
+                        unpackStream("<3f", byteBuffer)
+                    )
+                elif attribute == 2:
+                    self.tangents.append(
+                        unpackStream("<4f", byteBuffer)
+                    )
+                elif attribute == 3:
+                    self.joints.append(
+                        unpackStream("<4f", byteBuffer)
+                    )
+                elif attribute == 4:
+                    self.UV0.append(
+                        unpackStream("<2f", byteBuffer)
+                    )
+                elif attribute == 5:
+                    self.UV1.append(
+                        unpackStream("<2f", byteBuffer)
+                    )
 
     def read(self, stream, optionalMask):
         print("Read VertexBuffer")
@@ -72,6 +128,9 @@ class A3D1VertexBuffer:
                 AlternativaProtocol.readArrayLength(stream)
             )
         self.vertexCount, = unpackStream(">H", stream)
+
+        # Process our data
+        self.composeVertices()
 
 class A3D1Surface:
     def __init__(self):
@@ -262,3 +321,15 @@ class A3D1:
     
     def write(self, stream):
         print("Writing A3D1")
+    
+    '''
+    Getters/Setters
+    '''
+    def getGeometryByID(self, geometryID):
+        # Inefficient but this isn't a realtime application so who cares,
+        # the design doesn't let us store things by ID nicely anyway without
+        # overcomplicating stuff
+        for geometry in self.geometry:
+            if geometry.id == geometryID: return geometry
+        
+        raise RuntimeError(f"Unable to find geometry object with ID: {geometryID}")
