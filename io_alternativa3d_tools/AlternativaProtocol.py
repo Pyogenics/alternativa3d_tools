@@ -46,14 +46,15 @@ class OptionalMask:
         else:
             # Long null-mask: 64 - 4194304 bytes
             nullMaskLengthSize = nullMaskField & 0b01000000
-            nullMaskLength = nullMaskField & 0b0011111
-            if nullMaskLengthSize == 1:
+            nullMaskLength = nullMaskField & 0b00111111
+            if nullMaskLengthSize > 0:
                 # Long length: 22 bits
-                nullMaskLength += int.from_bytes(stream.read(2), "little")
+                nullMaskLength = nullMaskLength << 16
+                nullMaskLength += int.from_bytes(stream.read(2), "big")
             else:
                 # Short length: 6 bits
                 pass
-                
+            
             nullMask += stream.read(nullMaskLength)
             nullMaskOffset = 0
 
@@ -110,6 +111,8 @@ def readArrayLength(package):
             lengthBytes = int.from_bytes(package.read(2), "big")
             arrayLength = (arrayField & 0b00111111) << 16
             arrayLength += lengthBytes
+
+    print(f"Arr length: {arrayLength}")
 
     return arrayLength
 
