@@ -98,7 +98,7 @@ def readArrayLength(package):
     # Short array length
     if arrayLengthType == 0:
         # Length of the array is contained in the last 7 bits of this byte
-        arrayLength = arrayField
+        arrayLength = arrayField & 0b01111111
     else: # Must be large array length
         longArrayLengthType = arrayField & 0b01000000
         # Length in last 6 bits + next byte
