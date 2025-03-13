@@ -1,0 +1,37 @@
+schema_version = "1.0.0"
+
+id = "alternativa3d_tools"
+version = "2.0.0"
+name = "Alternativa3D tools"
+tagline = "Support for Alternativa3D (A3D) format files"
+maintainer = "Pyogenics <https://github.com/Pyogenics>"
+type = "add-on"
+
+website = "https://github.com/davidejones/alternativa3d_tools"
+
+tags = ["Import-Export"]
+
+blender_version_min = "4.2.0"
+
+license = [
+    "SPDX:MIT"
+]
+copyright = [
+    "2024 Pyogenics",
+    "2024 Davide E Jones"
+]
+
+# wheels = [
+# ]
+
+[permissions]
+files = "Import-Export Alternativa3D 3D model files"
+
+# [build]
+# # These are the default build excluded patterns.
+# # You only need to edit them if you want different options.
+# paths_exclude_pattern = [
+#   "__pycache__/",
+#   "/.git/",
+#   "/*.zip",
+# ]

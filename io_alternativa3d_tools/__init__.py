@@ -30,18 +30,6 @@ from .A3D2 import A3D2
 from .A3D1 import A3D1
 from .IOTools import unpackStream
 
-bl_info = {
-    "name": "Alternativa3d tools",
-    "description": "Support for Alternativa3D (A3D) format files",
-    "author": "David E Jones http://davidejones.com, Pyogenics https://www.github.com/Pyogenics",
-    "version": (2, 0, 0),
-    "blender": (4, 0, 0),
-    "location": "File > Import-Export",
-    "doc_url": "https://github.com/davidejones/alternativa3d_tools/",
-    "tracker_url": "https://github.com/davidejones/alternativa3d_tools/issues",
-    "category": "Import-Export"
-}
-
 '''
 Blender IO drivers
 '''
