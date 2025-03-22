@@ -22,7 +22,6 @@ SOFTWARE.
 
 from io import BytesIO
 from struct import unpack
-from array import array
 
 class OptionalMask:
     def __init__(self):
@@ -133,28 +132,28 @@ def readString(package):
 
 def readInt16Array(package):
     length = readArrayLength(package)
-    integers = unpack(f"{length}h", package.read(length*2))
-    integers = array("h", integers)
+    integers = unpack(f">{length}h", package.read(length*2))
+    integers = list(integers)
 
     return integers
 
 def readIntArray(package):
     length = readArrayLength(package)
-    integers = unpack(f"{length}i", package.read(length*4))
-    integers = array("i", integers)
+    integers = unpack(f">{length}i", package.read(length*4))
+    integers = list(integers)
 
     return integers
 
 def readInt64Array(package):
     length = readArrayLength(package)
-    integers = unpack(f"{length}q", package.read(length*8))
-    integers = array("q", integers)
+    integers = unpack(f">{length}q", package.read(length*8))
+    integers = list(integers)
 
     return integers
 
 def readFloatArray(package):
     length = readArrayLength(package)
-    floats = unpack(f"{length}f", package.read(length*4))
-    floats = array("f", floats)
+    floats = unpack(f">{length}f", package.read(length*4))
+    floats = list(floats)
 
     return floats

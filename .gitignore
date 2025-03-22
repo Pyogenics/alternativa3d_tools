@@ -1,3 +1,5 @@
 __pycache__/
 NOCOMMIT/
+.vscode/
+.venv/
 alternativa3d_tools-*.zip
